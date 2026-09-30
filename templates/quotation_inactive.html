@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <div class="hero">
+        <div>
+            <h1>Quotation Not Active</h1>
+
+            <p>
+                {% if quotation %}
+                    {{ quotation.quotation_number }}
+                {% endif %}
+            </p>
+        </div>
+
+        <span class="status big">
+            NOT ACTIVE
+        </span>
+    </div>
+
+
+    <div class="panel">
+
+        <div class="warning-box">
+
+            <h2>Quotation Declined</h2>
+
+            <p>
+                This quotation was declined by the client.
+            </p>
+
+            <p>
+                The quotation is now marked as
+                <strong>NOT ACTIVE</strong>.
+            </p>
+
+            <p>
+                No Purchase Order, Delivery, Invoice or Payment
+                workflow can be started for this quotation.
+            </p>
+
+        </div>
+
+
+        <div class="actions">
+
+            <a
+                class="btn"
+                href="{{ url_for('dashboard') }}"
+            >
+                ← Back to Dashboard
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

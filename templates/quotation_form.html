@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="header-row">
+    <div>
+        <h1>Create Quotation</h1>
+        <p>Professional quotation format with PDF generation and CRM storage.</p>
+    </div>
+</div>
+
+<form method="post" action="/quotation/create" class="panel">
+
+    <!-- COMPANY DETAILS -->
+    <h2>Company Details</h2>
+
+    <div class="grid">
+
+        <input
+            name="company_name"
+            value="PIONEER ENTERPRISES"
+            placeholder="Company Name"
+        >
+
+        <input
+            name="company_gstin"
+            placeholder="Company GSTIN"
+        >
+
+        <input
+            class="wide"
+            name="company_address"
+            placeholder="Company Address"
+        >
+
+        <input
+            name="company_email"
+            placeholder="Company Email"
+        >
+
+        <input
+            name="company_phone"
+            placeholder="Company Phone"
+        >
+
+    </div>
+
+
+    <!-- QUOTATION DETAILS -->
+    <h2>Quotation Details</h2>
+
+    <div class="grid">
+
+        <input
+            name="quotation_number"
+            value=""
+            placeholder="Auto-generated after saving"
+            readonly
+        >
+
+        <!-- ONLY ONE DATE -->
+        <input
+            name="quotation_date"
+            type="date"
+            id="quotation_date"
+        >
+
+        <input
+            name="reference"
+            value="Site discussion"
+            placeholder="Reference"
+        >
+
+    </div>
+
+
+    <!-- CUSTOMER -->
+    <h2>Customer</h2>
+
+    <div class="grid">
+
+        <input
+            name="customer_name"
+            placeholder="Customer / Company Name"
+            required
+        >
+
+        <input
+            name="customer_email"
+            type="email"
+            placeholder="Customer Email"
+            required
+        >
+
+        <input
+            name="customer_contact"
+            placeholder="Contact Person"
+        >
+
+        <input
+            name="customer_gstin"
+            placeholder="Customer GSTIN"
+        >
+
+        <input
+            class="wide"
+            name="customer_address"
+            placeholder="Customer Address"
+        >
+
+    </div>
+
+
+    <!-- ITEMS -->
+    <h2>Items</h2>
+
+    <div id="items">
+
+        <div class="item-row">
+
+            <input
+                name="description[]"
+                placeholder="Item & Description"
+                required
+            >
+
+            <input
+                name="hsn_code[]"
+                placeholder="HSN/SAC"
+            >
+
+            <input
+                name="quantity[]"
+                type="number"
+                step="0.01"
+                placeholder="Qty"
+            >
+
+            <input
+                name="rate[]"
+                type="number"
+                step="0.01"
+                placeholder="Rate"
+            >
+
+        </div>
+
+    </div>
+
+    <button
+        type="button"
+        class="btn secondary"
+        onclick="addItem()"
+    >
+        + Add Item
+    </button>
+
+
+    <!-- NOTES AND TERMS -->
+    <h2>Notes & Terms</h2>
+
+    <textarea
+        name="notes"
+        placeholder="Notes"
+    ></textarea>
+
+    <div class="grid">
+
+        <input
+            name="payment_terms"
+            value="50% advance along with PO, balance after work completion"
+            placeholder="Payment Terms"
+        >
+
+        <input
+            name="delivery_terms"
+            value="1 week from order with payment receiving"
+            placeholder="Delivery Terms"
+        >
+
+        <input
+            name="transportation"
+            value="Included"
+            placeholder="Transportation"
+        >
+
+        <input
+            name="validity_terms"
+            value="10 days"
+            placeholder="Validity"
+        >
+
+    </div>
+
+
+    <!-- BANK DETAILS -->
+    <h2>Bank Details</h2>
+
+    <div class="grid">
+
+        <input
+            name="bank_name_holder"
+            placeholder="Account Holder Name"
+        >
+
+        <input
+            name="bank_name"
+            placeholder="Bank Name"
+        >
+
+        <input
+            name="bank_address"
+            placeholder="Bank Address"
+        >
+
+        <input
+            name="account_number"
+            placeholder="Account Number"
+        >
+
+        <input
+            name="ifsc"
+            placeholder="IFSC"
+        >
+
+    </div>
+
+
+    <!-- SUBMIT -->
+    <div class="actions">
+
+        <button
+            class="btn primary"
+            type="submit"
+        >
+            Create & Save Quotation
+        </button>
+
+    </div>
+
+</form>
+
+
+<script>
+
+function addItem() {
+
+    document
+        .getElementById("items")
+        .insertAdjacentHTML(
+            "beforeend",
+
+            `
+            <div class="item-row">
+
+                <input
+                    name="description[]"
+                    placeholder="Item & Description"
+                    required
+                >
+
+                <input
+                    name="hsn_code[]"
+                    placeholder="HSN/SAC"
+                >
+
+                <input
+                    name="quantity[]"
+                    type="number"
+                    step="0.01"
+                    placeholder="Qty"
+                >
+
+                <input
+                    name="rate[]"
+                    type="number"
+                    step="0.01"
+                    placeholder="Rate"
+                >
+
+            </div>
+            `
+        );
+}
+
+
+/* Automatically put today's date */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const dateInput =
+            document.getElementById("quotation_date");
+
+        if (dateInput && !dateInput.value) {
+
+            const today =
+                new Date()
+                    .toISOString()
+                    .split("T")[0];
+
+            dateInput.value = today;
+        }
+
+    }
+);
+
+</script>
+
+{% endblock %}

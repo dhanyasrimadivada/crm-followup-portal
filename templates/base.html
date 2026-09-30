@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>CRM Follow-Up Portal</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        CRM Follow-Up Portal
+    </div>
+
+    <nav class="nav-links">
+
+        <a
+            href="{{ url_for('dashboard') }}"
+            class="nav-btn"
+        >
+            <span>▦</span>
+            Dashboard
+        </a>
+
+        <a
+            href="{{ url_for('quotation_new') }}"
+            class="nav-btn"
+        >
+            <span>＋</span>
+            New Quotation
+        </a>
+
+        <a
+            href="{{ url_for('chatbot') }}"
+            class="nav-btn ai-nav-btn"
+        >
+            <span>✦</span>
+            AI Assistant
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main class="container">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% for category, message in messages %}
+
+            <div class="alert {{ category }}">
+                {{ message }}
+            </div>
+
+        {% endfor %}
+
+    {% endwith %}
+
+
+    {% block content %}{% endblock %}
+
+</main>
+
+
+<!-- =========================================================
+     GLOBAL AI CHAT
+     ========================================================= -->
+
+<div
+    id="aiChatPanel"
+    class="ai-chat-panel"
+>
+
+    <div class="ai-chat-header">
+
+        <div>
+            <strong>✦ AI Assistant</strong>
+            <small>CRM Follow-Up Assistant</small>
+        </div>
+
+        <button
+            type="button"
+            onclick="toggleAIChat()"
+            class="ai-close"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <div
+        id="aiMessages"
+        class="ai-messages"
+    >
+
+        <div class="ai-message bot">
+            <div class="ai-bubble">
+                Hi! 👋 I'm your CRM Assistant.<br><br>
+                You can ask me things like:
+                <br>
+                • What are the overdue invoices?
+                <br>
+                • Show pending payments
+                <br>
+                • What customers need follow-up?
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="ai-input-area">
+
+        <input
+            type="text"
+            id="aiInput"
+            placeholder="Ask about your CRM..."
+            autocomplete="off"
+            onkeydown="handleAIKey(event)"
+        >
+
+        <button
+            type="button"
+            onclick="sendAIMessage()"
+            id="aiSendButton"
+        >
+            Send
+        </button>
+
+    </div>
+
+</div>
+
+
+<button
+    type="button"
+    class="chatbot-float"
+    onclick="toggleAIChat()"
+    title="Open AI Assistant"
+>
+    ✦
+</button>
+
+
+<script>
+
+function toggleAIChat() {
+
+    const panel = document.getElementById("aiChatPanel");
+
+    panel.classList.toggle("open");
+
+    if (panel.classList.contains("open")) {
+
+        setTimeout(() => {
+
+            document.getElementById("aiInput").focus();
+
+        }, 150);
+    }
+}
+
+
+function handleAIKey(event) {
+
+    if (event.key === "Enter") {
+
+        event.preventDefault();
+
+        sendAIMessage();
+    }
+}
+
+
+function addAIMessage(message, type) {
+
+    const messages =
+        document.getElementById("aiMessages");
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.className =
+        "ai-message " + type;
+
+
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "ai-bubble";
+
+    bubble.textContent = message;
+
+
+    wrapper.appendChild(bubble);
+
+    messages.appendChild(wrapper);
+
+
+    messages.scrollTop =
+        messages.scrollHeight;
+}
+
+
+async function sendAIMessage() {
+
+    const input =
+        document.getElementById("aiInput");
+
+    const button =
+        document.getElementById("aiSendButton");
+
+    const message =
+        input.value.trim();
+
+
+    if (!message) {
+        return;
+    }
+
+
+    addAIMessage(message, "user");
+
+    input.value = "";
+
+    button.disabled = true;
+    button.textContent = "...";
+
+
+    try {
+
+        const response = await fetch("/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                message: message
+            })
+
+        });
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Something went wrong."
+            );
+        }
+
+
+        const reply =
+            data.response ||
+            data.message ||
+            data.answer ||
+            "I couldn't find an answer.";
+
+
+        addAIMessage(
+            reply,
+            "bot"
+        );
+
+
+    } catch (error) {
+
+        addAIMessage(
+            "Sorry, I couldn't connect to the CRM assistant right now.",
+            "bot"
+        );
+
+        console.error(error);
+
+    } finally {
+
+        button.disabled = false;
+        button.textContent = "Send";
+
+        input.focus();
+    }
+}
+
+</script>
+
+</body>
+</html>

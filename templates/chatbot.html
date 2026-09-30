@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header-row"><div><h1>CRM AI Assistant</h1><p>Ask the agent about quotations, POs, delivery, invoices, payments and reminders.</p></div><a class="btn secondary" href="{{ url_for('dashboard') }}">← Dashboard</a></div>
+<div class="panel chatbot-panel">
+<div class="suggestions"><button type="button" onclick="ask('What quotations are waiting for PO?')">Waiting for PO</button><button type="button" onclick="ask('What are my overdue invoices?')">Overdue invoices</button><button type="button" onclick="ask('Show me the current CRM dashboard.')">Dashboard</button><button type="button" onclick="ask('Which customers need follow-up?')">Follow-ups</button></div>
+<form method="post" action="{{ url_for('chat') }}" id="chatForm"><textarea name="message" id="message" placeholder="Ask your CRM agent..." required>{{ message or '' }}</textarea><button class="btn primary" type="submit">Ask Agent</button></form>
+{% if response %}<div class="response"><div class="response-title">CRM Agent</div><pre>{{ response }}</pre></div>{% endif %}
+</div>
+<script>function ask(t){document.getElementById('message').value=t;document.getElementById('chatForm').submit();}</script>
+{% endblock %}

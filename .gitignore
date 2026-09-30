@@ -1,7 +1,26 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+
+# Secrets
 .env
+
+# Streamlit
 .streamlit/
+
+# Database
 data/crm.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
 *.log
+
+# Runtime uploads
+uploads/
+
+# Extracted/private document data
+invoice_extracted.json
+po_extracted.json

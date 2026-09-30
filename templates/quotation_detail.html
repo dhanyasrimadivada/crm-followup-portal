@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="hero">
+    <div>
+        <h1>{{ q.quotation_number }}</h1>
+        <p>
+            {{ q.customer.company_name }}
+            · ₹{{ '%.2f'|format(q.total_amount) }}
+        </p>
+    </div>
+
+    <span class="status big">
+        {{ q.status }}
+    </span>
+</div>
+
+
+<!-- QUOTATION DOCUMENT -->
+<div class="panel">
+
+    <h2>Quotation Document</h2>
+
+    <p>
+        The quotation is saved in SQLite and the PDF is stored
+        as a document.
+    </p>
+
+    <div class="actions">
+
+        <a
+            class="btn"
+            href="{{ url_for(
+                'quotation_download',
+                quotation_id=q.id
+            ) }}"
+        >
+            Download PDF
+        </a>
+
+    </div>
+
+</div>
+
+
+<!-- SEND QUOTATION -->
+<div class="panel">
+
+    <h2>Send Quotation by Email</h2>
+
+    <form
+        method="post"
+        action="{{ url_for(
+            'quotation_send',
+            quotation_id=q.id
+        ) }}"
+        class="inline-form"
+    >
+
+        <input
+            type="email"
+            name="email"
+            value="{{ q.customer.email }}"
+            required
+        >
+
+        <button class="btn">
+            Send Mail
+        </button>
+
+    </form>
+
+</div>
+
+
+<!-- CLIENT DECISION -->
+{% if q.status in ['DRAFT', 'SENT'] %}
+
+<div class="panel">
+
+    <h2>Client Decision</h2>
+
+    <p>
+        The client must either accept or decline this quotation.
+    </p>
+
+    <div class="actions">
+
+        <!-- ACCEPT -->
+        <form
+            method="post"
+            action="{{ url_for(
+                'quotation_accept',
+                quotation_id=q.id
+            ) }}"
+        >
+
+            <button class="btn">
+                Accept → PO Required
+            </button>
+
+        </form>
+
+
+        <!-- DECLINE -->
+        <form
+            method="post"
+            action="{{ url_for(
+                'quotation_decline',
+                quotation_id=q.id
+            ) }}"
+            onsubmit="return confirm(
+                'Are you sure you want to decline this quotation?'
+            );"
+        >
+
+            <button class="btn danger">
+                Decline
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+
+<!-- ACCEPTED -->
+{% if q.status == 'AWAITING_PO' %}
+
+<div class="panel next">
+
+    <h2>✓ Quotation Accepted</h2>
+
+    <p>
+        The quotation has been accepted.
+        A Purchase Order is mandatory before delivery can begin.
+    </p>
+
+    <a
+        class="btn"
+        href="{{ url_for(
+            'quotation_po',
+            quotation_id=q.id
+        ) }}"
+    >
+        Open PO Section →
+    </a>
+
+</div>
+
+{% endif %}
+
+
+<!-- NOT ACTIVE -->
+{% if q.status == 'NOT_ACTIVE' %}
+
+<div class="panel">
+
+    <div class="warning-box">
+
+        <h2>Quotation Not Active</h2>
+
+        <p>
+            This quotation was declined by the client.
+        </p>
+
+        <p>
+            No Purchase Order, Delivery, Invoice or Payment
+            workflow is available for this quotation.
+        </p>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}
