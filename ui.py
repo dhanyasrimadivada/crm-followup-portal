@@ -311,6 +311,22 @@ def purchase_orders():
         return redirect(url_for("dashboard"))
 
 
+@app.route("/overdue-invoices")
+def overdue_invoices():
+    try:
+        data = api_get("/invoices/overdue").json()
+        if not data.get("success"):
+            flash(data.get("error", "Could not load overdue invoices."), "error")
+            return redirect(url_for("dashboard"))
+        return render_template(
+            "overdue_invoices.html",
+            invoices=data.get("invoices", []),
+        )
+    except Exception as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("dashboard"))
+
+
 @app.route("/purchase-order/<int:po_id>")
 def purchase_order_detail(po_id):
     try:

@@ -12,6 +12,7 @@ from database.models import (
 
 from services.payment_service import (
     record_payment,
+    refresh_overdue_invoices,
 )
 
 from services.reminder_service import send_payment_reminder
@@ -350,6 +351,7 @@ def get_followups():
 def get_dashboard():
     """Get CRM dashboard KPIs."""
 
+    refresh_overdue_invoices()
     db = SessionLocal()
 
     try:

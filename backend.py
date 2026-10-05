@@ -15,6 +15,7 @@ from database.models import (
     Customer, Quotation, QuotationItem, PurchaseOrder, Delivery,
     Invoice, Payment, Document
 )
+from services.payment_service import refresh_overdue_invoices
 
 load_dotenv()
 
@@ -123,12 +124,22 @@ def serialize_delivery(d):
 def serialize_invoice(inv):
     if not inv:
         return None
+
+    total_paid = sum(
+        float(p.amount or 0)
+        for p in (inv.payments or [])
+        if p.status in ("PAID", "PARTIAL")
+    )
+    total_amount = float(inv.total_amount or 0)
+
     return {
         "id": inv.id,
         "purchase_order_id": inv.purchase_order_id,
         "invoice_number": inv.invoice_number,
         "invoice_date": inv.invoice_date.isoformat() if inv.invoice_date else None,
-        "total_amount": inv.total_amount or 0,
+        "total_amount": total_amount,
+        "total_paid": total_paid,
+        "remaining_amount": max(total_amount - total_paid, 0.0),
         "due_date": inv.due_date.isoformat() if inv.due_date else None,
         "status": inv.status,
         "payment_terms": inv.payment_terms,
@@ -190,6 +201,7 @@ def root():
 
 @app.get("/dashboard/stats")
 def dashboard_stats():
+    refresh_overdue_invoices()
     db = SessionLocal()
     try:
         quotations = db.query(Quotation).count()
@@ -280,9 +292,9 @@ def create_quotation(data: dict):
 
             raw_tax = item.get("tax_rate")
             try:
-                tax_rate = float(raw_tax) if raw_tax is not None and str(raw_tax).strip() != "" else 18.0
+                tax_rate = float(raw_tax) if raw_tax is not None and str(raw_tax).strip() != "" else 0.0
             except (ValueError, TypeError):
-                tax_rate = 18.0
+                tax_rate = 0.0
 
             line = qty * rate
             line_tax = line * tax_rate / 100
@@ -430,6 +442,7 @@ def decline_quotation(quotation_id: int):
 
 @app.get("/purchase-orders")
 def get_purchase_orders():
+    refresh_overdue_invoices()
     db = SessionLocal()
     try:
         rows = db.query(PurchaseOrder).order_by(PurchaseOrder.id.desc()).all()
@@ -452,6 +465,7 @@ def get_purchase_orders():
 
 @app.get("/purchase-orders/{po_id}/workflow")
 def purchase_order_workflow(po_id: int):
+    refresh_overdue_invoices()
     db = SessionLocal()
     try:
         po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
@@ -474,6 +488,7 @@ def purchase_order_workflow(po_id: int):
 
 @app.get("/quotations/{quotation_id}/workflow")
 def quotation_workflow(quotation_id: int):
+    refresh_overdue_invoices()
     db = SessionLocal()
     try:
         q = db.query(Quotation).filter(Quotation.id == quotation_id).first()
@@ -544,6 +559,16 @@ def update_delivery(po_id: int, data: dict):
         status = (data.get("status") or "NOT_STARTED").upper()
         if status not in {"NOT_STARTED", "IN_PROCESS", "COMPLETED"}:
             return {"success": False, "error": "Invalid delivery status."}
+
+        if delivery.delivery_status == "COMPLETED" and status != "COMPLETED":
+            return {
+                "success": False,
+                "error": (
+                    "Delivery is already COMPLETED and cannot be moved "
+                    "back to another status."
+                ),
+            }
+
         delivery.delivery_status = status
         delivery.remarks = data.get("remarks")
         if data.get("expected_date"):
@@ -616,6 +641,36 @@ def send_invoice_reminder(invoice_id: int):
         return {"success": True, "message": "Payment reminder email sent successfully."}
     except Exception as exc:
         return {"success": False, "error": str(exc)}
+
+
+@app.get("/invoices/overdue")
+def get_overdue_invoice_list():
+    refresh_overdue_invoices()
+    db = SessionLocal()
+    try:
+        invoices = (
+            db.query(Invoice)
+            .filter(Invoice.status == "OVERDUE")
+            .order_by(Invoice.due_date.asc(), Invoice.id.asc())
+            .all()
+        )
+        return {
+            "success": True,
+            "invoices": [
+                {
+                    **serialize_invoice(invoice),
+                    "customer": serialize_customer(invoice.customer),
+                    "po_number": (
+                        invoice.purchase_order.po_number
+                        if invoice.purchase_order
+                        else None
+                    ),
+                }
+                for invoice in invoices
+            ],
+        }
+    finally:
+        db.close()
 
 
 @app.get("/documents/quotation/{quotation_id}")

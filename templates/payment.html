@@ -1,2 +1,122 @@
 {% extends "base.html" %}
-{% block content %}<div class="header-row"><div><h1>Payment</h1><p>{{ invoice.invoice_number }} → {{ quotation.quotation_number }}</p></div><span class="status big">{{ invoice.status }}</span></div><div class="panel"><h2>Invoice Details</h2><div class="summary-grid"><div><span>Invoice</span><strong>{{ invoice.invoice_number }}</strong></div><div><span>Total</span><strong>₹{{ "{:,.2f}".format(invoice.total_amount or 0) }}</strong></div><div><span>Invoice Date</span><strong>{{ invoice.invoice_date or '—' }}</strong></div><div><span>Due Date</span><strong>{{ invoice.due_date or 'Not specified' }}</strong></div></div></div>{% if invoice.status != 'PAID' %}<div class="panel"><h2>Confirm Payment Status</h2><p>The system will not assume that payment is completed. Record the actual status.</p><form method="post" action="{{ url_for('payment_record', invoice_id=invoice.id) }}"><input type="hidden" name="quotation_id" value="{{ quotation.id }}"><label>Payment Status</label><select name="status" required><option value="PAID">PAID</option><option value="NOT PAID">NOT PAID</option></select><label>Amount</label><input type="number" step="0.01" name="amount" value="{{ invoice.total_amount }}"><label>Payment Method</label><select name="payment_method"><option value="BANK_TRANSFER">Bank Transfer</option><option value="UPI">UPI</option><option value="CASH">Cash</option><option value="CHEQUE">Cheque</option></select><label>Reference Number</label><input name="reference_number" placeholder="Optional"><label>Notes</label><textarea name="notes" rows="3"></textarea><div class="actions"><button class="btn primary" type="submit">Save Payment Status</button></div></form></div>{% else %}<div class="panel"><div class="success-box"><h2>✓ Payment Completed</h2><p>This invoice is PAID and will not automatically become overdue.</p></div></div>{% endif %}{% if invoice.status == 'OVERDUE' %}<div class="panel"><h2>Overdue Payment</h2><p>This invoice is overdue.</p><form method="post" action="{{ url_for('reminder_send', invoice_id=invoice.id) }}"><input type="hidden" name="quotation_id" value="{{ quotation.id }}"><button class="btn danger" type="submit">Send Payment Reminder</button></form></div>{% endif %}{% endblock %}
+{% block content %}
+<div class="header-row">
+    <div>
+        <h1>Payment</h1>
+        <p>{{ invoice.invoice_number }} → {{ quotation.quotation_number }}</p>
+    </div>
+    <span class="status big">{{ invoice.status }}</span>
+</div>
+
+<div class="panel">
+    <h2>Invoice Details</h2>
+    <div class="summary-grid">
+        <div><span>Invoice</span><strong>{{ invoice.invoice_number }}</strong></div>
+        <div><span>Total</span><strong>₹{{ "{:,.2f}".format(invoice.total_amount or 0) }}</strong></div>
+        <div><span>Paid</span><strong>₹{{ "{:,.2f}".format(invoice.total_paid or 0) }}</strong></div>
+        <div><span>Remaining</span><strong>₹{{ "{:,.2f}".format(invoice.remaining_amount or 0) }}</strong></div>
+        <div><span>Invoice Date</span><strong>{{ invoice.invoice_date or '—' }}</strong></div>
+        <div><span>Due Date</span><strong>{{ invoice.due_date or '—' }}</strong></div>
+        <div><span>Payment Terms</span><strong>{{ invoice.payment_terms or 'Default: 10 days' }}</strong></div>
+    </div>
+</div>
+
+{% if invoice.status == 'PAID' %}
+<div class="panel">
+    <div class="success-box">
+        <h2>✓ Payment Completed</h2>
+        <p>This invoice is fully paid and cannot be changed back to unpaid.</p>
+    </div>
+</div>
+{% else %}
+<div class="panel">
+    <h2>Record Payment</h2>
+
+    {% if invoice.total_paid and invoice.total_paid > 0 %}
+    <div class="success-box">
+        <strong>Partial payment already recorded.</strong>
+        <p>
+            ₹{{ "{:,.2f}".format(invoice.total_paid) }} has been paid.
+            The invoice cannot be changed back to NOT PAID.
+        </p>
+    </div>
+    {% else %}
+    <p>You can record the invoice as unpaid, partially paid, or fully paid.</p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('payment_record', invoice_id=invoice.id) }}">
+        <input type="hidden" name="quotation_id" value="{{ quotation.id }}">
+
+        <label>Payment Status</label>
+        <select name="status" id="paymentStatus" required onchange="updatePaymentAmount()">
+            {% if not invoice.total_paid or invoice.total_paid <= 0 %}
+            <option value="NOT_PAID">NOT PAID</option>
+            {% endif %}
+            <option value="PARTIAL">PARTIAL PAYMENT</option>
+            <option value="PAID">PAID / COMPLETED</option>
+        </select>
+
+        <label>Amount</label>
+        <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            max="{{ invoice.remaining_amount }}"
+            id="paymentAmount"
+            name="amount"
+            value="{{ invoice.remaining_amount }}"
+            required
+        >
+
+        <label>Payment Method</label>
+        <select name="payment_method">
+            <option value="BANK_TRANSFER">Bank Transfer</option>
+            <option value="UPI">UPI</option>
+            <option value="CASH">Cash</option>
+            <option value="CHEQUE">Cheque</option>
+        </select>
+
+        <label>Reference Number</label>
+        <input name="reference_number" placeholder="Optional">
+
+        <label>Notes</label>
+        <textarea name="notes" rows="3"></textarea>
+
+        <div class="actions">
+            <button class="btn primary" type="submit">Save Payment</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+{% if invoice.status == 'OVERDUE' %}
+<div class="panel">
+    <h2>Overdue Payment</h2>
+    <p>This invoice is overdue. You can send a payment reminder or record the outstanding payment.</p>
+    <form method="post" action="{{ url_for('reminder_send', invoice_id=invoice.id) }}">
+        <input type="hidden" name="quotation_id" value="{{ quotation.id }}">
+        <button class="btn danger" type="submit">Send Payment Reminder</button>
+    </form>
+</div>
+{% endif %}
+
+<script>
+function updatePaymentAmount() {
+    const status = document.getElementById("paymentStatus").value;
+    const amount = document.getElementById("paymentAmount");
+    const remaining = Number("{{ invoice.remaining_amount or 0 }}");
+
+    if (status === "PAID") {
+        amount.value = remaining.toFixed(2);
+    } else if (status === "NOT_PAID") {
+        amount.value = "0";
+        amount.removeAttribute("required");
+    } else {
+        if (Number(amount.value) <= 0) {
+            amount.value = remaining.toFixed(2);
+        }
+        amount.setAttribute("required", "required");
+    }
+}
+</script>
+{% endblock %}

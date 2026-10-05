@@ -6,7 +6,7 @@
 <div class="card"><span>Awaiting PO</span><strong>{{ stats.get('awaiting_po', 0) }}</strong></div>
 <div class="card"><span>Purchase Orders</span><strong>{{ stats.get('purchase_orders', 0) }}</strong></div>
 <div class="card"><span>In Process Delivery</span><strong>{{ stats.get('deliveries_in_process', 0) }}</strong></div>
-<div class="card"><span>Overdue</span><strong>{{ stats.get('overdue', 0) }}</strong></div>
+<a class="card" href="{{ url_for('overdue_invoices') }}"><span>Overdue</span><strong>{{ stats.get('overdue', 0) }}</strong><small>View overdue invoices →</small></a>
 <div class="card"><span>Paid Invoices</span><strong>{{ stats.get('paid_invoices', 0) }}</strong></div>
 </div>
 <div class="panel"><h2>CRM Pipeline</h2><div class="pipeline"><span>Quotation</span><b>→</b><span>PO</span><b>→</b><span>Delivery</span><b>→</b><span>Invoice</span><b>→</b><span>Payment</span></div></div>

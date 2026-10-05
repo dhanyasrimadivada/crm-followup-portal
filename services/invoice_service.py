@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import re
 
 from database.db import SessionLocal
 from database.models import (
@@ -189,34 +190,58 @@ def save_invoice_for_po(
         )
 
         # ==================================================
-        # PAYMENT TERMS
+        # PAYMENT TERMS / DUE DATE
         # ==================================================
+
+        def parse_days(value):
+            if value is None:
+                return None
+            try:
+                number = int(value)
+                return number if number > 0 else None
+            except (TypeError, ValueError):
+                pass
+
+            match = re.search(r"\b(\d{1,3})\s*(?:day|days|d)\b", str(value), re.I)
+            if match:
+                number = int(match.group(1))
+                return number if number > 0 else None
+            return None
 
         if isinstance(payment_info, str):
             payment_description = payment_info.strip()
-            payment_days = None
+            payment_days = parse_days(payment_info)
             extracted_due_date = invoice_data.get("due_date")
         else:
-            payment_days = payment_info.get("payment_days")
-            if payment_days is not None:
-                try:
-                    payment_days = int(payment_days)
-                    if payment_days <= 0:
-                        payment_days = None
-                except (TypeError, ValueError):
-                    payment_days = None
-
+            payment_days = parse_days(payment_info.get("payment_days"))
             payment_description = str(
                 payment_info.get("payment_terms")
                 or payment_info.get("description")
                 or payment_info.get("terms")
                 or ""
             ).strip()
+            if payment_days is None:
+                payment_days = parse_days(payment_description)
 
             extracted_due_date = (
                 payment_info.get("due_date")
                 or invoice_data.get("due_date")
             )
+
+        # If the invoice does not specify terms, use the PO terms.
+        if payment_days is None:
+            payment_days = parse_days(purchase_order.payment_days)
+
+        if not payment_description and purchase_order.payment_terms:
+            payment_description = str(purchase_order.payment_terms).strip()
+
+        # Business rule: if neither the invoice nor the PO contains
+        # payment terms/days, default the invoice due date to 10 days
+        # after the invoice date.
+        if payment_days is None:
+            payment_days = 10
+            if not payment_description:
+                payment_description = "Default payment term: 10 days"
 
         # ==================================================
         # DUE DATE
@@ -225,17 +250,10 @@ def save_invoice_for_po(
         due_date = None
 
         if extracted_due_date:
-
             if hasattr(extracted_due_date, "year"):
-
                 due_date = extracted_due_date
-
             else:
-
-                date_string = str(
-                    extracted_due_date
-                ).strip()
-
+                date_string = str(extracted_due_date).strip()
                 for fmt in (
                     "%Y-%m-%d",
                     "%d/%m/%Y",
@@ -243,34 +261,15 @@ def save_invoice_for_po(
                     "%d-%b-%y",
                     "%d-%B-%Y",
                 ):
-
                     try:
-
-                        due_date = (
-                            datetime.strptime(
-                                date_string,
-                                fmt
-                            ).date()
-                        )
-
+                        due_date = datetime.strptime(date_string, fmt).date()
                         break
-
                     except ValueError:
                         continue
 
-        # If no due date was extracted,
-        # calculate it from invoice date + payment days.
-
-        if (
-            due_date is None
-            and parsed_invoice_date
-            and payment_days
-        ):
-
-            due_date = (
-                parsed_invoice_date
-                + timedelta(days=payment_days)
-            )
+        if due_date is None:
+            base_date = parsed_invoice_date or datetime.now().date()
+            due_date = base_date + timedelta(days=payment_days)
 
         # ==================================================
         # CREATE INVOICE

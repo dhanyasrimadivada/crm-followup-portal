@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header-row">
+    <div>
+        <h1>Overdue Invoices</h1>
+        <p>Invoices whose payment due date has passed and are not fully paid.</p>
+    </div>
+    <a class="btn secondary" href="{{ url_for('dashboard') }}">← Dashboard</a>
+</div>
+
+<div class="panel">
+    {% if invoices %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th>PO</th>
+                    <th>Total</th>
+                    <th>Paid</th>
+                    <th>Remaining</th>
+                    <th>Due Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for invoice in invoices %}
+                <tr>
+                    <td><strong>{{ invoice.invoice_number }}</strong></td>
+                    <td>{{ invoice.customer.company_name if invoice.customer else '—' }}</td>
+                    <td>{{ invoice.po_number or '—' }}</td>
+                    <td>₹{{ "{:,.2f}".format(invoice.total_amount or 0) }}</td>
+                    <td>₹{{ "{:,.2f}".format(invoice.total_paid or 0) }}</td>
+                    <td>₹{{ "{:,.2f}".format(invoice.remaining_amount or 0) }}</td>
+                    <td>{{ invoice.due_date or '—' }}</td>
+                    <td>
+                        {% if invoice.purchase_order_id %}
+                        <a class="btn secondary" href="{{ url_for('purchase_order_detail', po_id=invoice.purchase_order_id) }}">
+                            Open
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty">
+        <h3>No overdue invoices</h3>
+        <p>All invoices are currently within their payment terms or fully paid.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

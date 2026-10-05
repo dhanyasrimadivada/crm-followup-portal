@@ -211,6 +211,21 @@ def update_delivery_status(
             }
 
         # --------------------------------------------
+        # Workflow lock
+        # --------------------------------------------
+        # COMPLETED is a terminal state. Once delivery is
+        # completed, it cannot be moved back to IN_PROCESS
+        # or NOT_STARTED.
+        if delivery.delivery_status == "COMPLETED" and new_status != "COMPLETED":
+            return {
+                "success": False,
+                "error": (
+                    "Delivery is already COMPLETED and cannot be moved "
+                    "back to another status."
+                ),
+            }
+
+        # --------------------------------------------
         # Update status
         # --------------------------------------------
 

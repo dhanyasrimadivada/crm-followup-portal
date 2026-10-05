@@ -222,6 +222,12 @@ Use ₹ for Indian currency.
 Do not invent information.
 
 If there are no records, clearly say so.
+
+IMPORTANT FORMATTING RULE:
+- Do NOT use Markdown tables.
+- For multiple CRM records, use a short bullet list.
+- For pending/overdue invoices, show invoice number, customer, amount, due date and status as bullets.
+- Keep the response easy to scan.
 """
 
     response = client.chat.completions.create(
